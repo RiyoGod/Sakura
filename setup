@@ -1,126 +1,124 @@
 #!/bin/bash
 
-pprint (){
-	cred='\033[0;31m'
-	cgreen='\033[0;32m'
-	cyellow='\033[0;33m'
-	cblue='\033[0;34m'
-	cpurple='\033[0;35m'
-	eval "export color='$cpurple'"
-	[ ! -z $2 ] && eval "export color=\"\$$2\""
-    printf "$color $1"
+# Function to print colored text
+pprint() {
+    local cred='\033[0;31m'
+    local cgreen='\033[0;32m'
+    local cyellow='\033[0;33m'
+    local cblue='\033[0;34m'
+    local cpurple='\033[0;35m'
+    local color="$cpurple"
+    [ ! -z "$2" ] && eval "color=\"\$$2\""
+    printf "$color$1\033[0m\n"
 }
 
-color_reset(){ printf '\033[0;37m';}
+# Function to reset color
+color_reset() { printf '\033[0m'; }
 
-yesnoprompt(){
-	old_stty_cfg=$(stty -g)
-	stty raw -echo ; answer=$(head -c 1)
-	stty $old_stty_cfg
-	echo "$answer" | grep -iq "^y"
+# Yes/No prompt function
+yesnoprompt() {
+    read -p " [y/n]: " -n 1 -r
+    echo
+    [[ $REPLY =~ ^[Yy]$ ]]
 }
 
-update() {
-	pprint "\n\nUpdating package list.. "
-	sudo apt update 2>&1 | grep "can be upgraded" &>/dev/null
-	if [ $? -eq 0 ]; then
-		pprint "UPDATE AVAILABLE" "cgreen"
-		pprint "\n\nDo you want to automatically upgrade (y/n)?"
-		if yesnoprompt; then
-			pprint "\n\nUpgrading packages.. "
-			sudo apt upgrade -y &>/dev/null &&
-			pprint "DONE!\n\n" "cgreen" || (pprint "FAIL.\n\n" "cred"; exit 1)
-		else
-			echo
-		fi
-	else
-		pprint "ALREADY UP TO DATE\n\n" "cgreen"
-	fi
+# System Update Function
+update_system() {
+    pprint "\nUpdating package list... " "cblue"
+    sudo apt update &>/dev/null
+    if [ $? -eq 0 ]; then
+        pprint "System updated successfully!" "cgreen"
+    else
+        pprint "Failed to update system!" "cred"
+        exit 1
+    fi
+
+    if apt list --upgradable 2>/dev/null | grep -q "upgradable"; then
+        pprint "Updates available. Do you want to upgrade? (y/n)" "cyellow"
+        if yesnoprompt; then
+            pprint "Upgrading packages... " "cblue"
+            sudo apt upgrade -y &>/dev/null && pprint "Upgrade complete!" "cgreen" || pprint "Upgrade failed!" "cred"
+        else
+            pprint "Skipping upgrade." "cyellow"
+        fi
+    else
+        pprint "All packages are already up to date." "cgreen"
+    fi
 }
 
-packages(){
-	if ! command -v pip &>/dev/null; then
-		pprint "Couldn't found pip, installing now..."
-		sudo apt install python3-pip -y 2>pypilog.txt 1>/dev/null &&
-		pprint "SUCCESS.\n\n" "cgreen" || (pprint "FAIL.\n\n" "cred"; exit 1)
-	fi
-
-	if ! command -v ffmpeg &>/dev/null; then
-		pprint "Couldn't found ffmpeg, installing now..."
-		if sudo apt install ffmpeg -y &>/dev/null;then
-			pprint "SUCCESS.\n\n" "cgreen"
-		else
-			pprint "FAIL.\n\n" "cred"
-			pprint "You need to install ffmpeg manually in order to deploy AnonXMusic, exiting...\n" "cblue"
-			exit 1
-		fi
-	fi
-
-	# Check ffmpeg version and warn user if necessary.
-	fv=$(grep -Po 'version (3.*?) ' <<< $(ffmpeg -version)) &&
-	pprint "Playing live streams not going to work since you have ffmpeg $fv, live streams are supported by version 4+.\n" "cblue"
+# Package Installation
+install_packages() {
+    for pkg in python3-pip ffmpeg; do
+        if ! command -v "$pkg" &>/dev/null; then
+            pprint "Installing $pkg..." "cblue"
+            sudo apt install -y "$pkg" &>/dev/null && pprint "$pkg installed successfully!" "cgreen" || pprint "Failed to install $pkg!" "cred"
+        else
+            pprint "$pkg is already installed." "cgreen"
+        fi
+    done
 }
 
-
-node(){
-	command -v npm &>/dev/null && return
-	pprint "Installing Nodejs and Npm..  "
-	curl -fssL https://deb.nodesource.com/setup_19.x | sudo -E bash - &>nodelog.txt &&
-	sudo apt install -y nodejs &>>nodelog.txt &&
-	sudo npm i -g npm &>>nodelog.txt &&
-	pprint "SUCCESS!\n" "cgreen" || (pprint "FAIL.\n" "cred"; exit 1)
+# Node.js Installation
+install_node() {
+    if ! command -v npm &>/dev/null; then
+        pprint "Installing Node.js and npm... " "cblue"
+        curl -fsSL https://deb.nodesource.com/setup_19.x | sudo -E bash - &>/dev/null
+        sudo apt install -y nodejs &>/dev/null && sudo npm i -g npm &>/dev/null
+        pprint "Node.js and npm installed successfully!" "cgreen"
+    else
+        pprint "Node.js and npm are already installed." "cgreen"
+    fi
 }
 
-
-installation(){
-	pprint "\n\nUpgrading pip and installing dependency packages..."
-	pip3 install -U pip &>>pypilog.txt &&
-	pip3 install -U -r requirements.txt &>>pypilog.txt &&
-	pprint "DONE.\n" "cgreen" && return
-	pprint "FAIL.\n" "cred"
-	exit 1
+# Install Python Dependencies
+install_python_dependencies() {
+    pprint "Installing Python dependencies... " "cblue"
+    pip3 install -U pip &>/dev/null
+    pip3 install -U -r requirements.txt &>/dev/null && pprint "Dependencies installed successfully!" "cgreen" || pprint "Failed to install dependencies!" "cred"
 }
 
-clear
-pprint "Welcome to AnonXMusic Setup Installer\n\n"
-pprint "If you see any error during Installation Process, Please refer to these files for logs: "
-pprint "\nFor node js errors , Checkout nodelog.txt"
-pprint "\nFor pypi packages errors , Checkout pypilog.txt"
-sleep 1
-pprint "\n\nScript needs sudo privileges in order to update & install packages.\n"
-sudo test
+# User Input for Environment Variables
+collect_env_vars() {
+    clear
+    pprint "Welcome to YorXMusic Setup Installer!" "cblue"
+    pprint "If any errors occur, check the log files: " "cyellow"
+    pprint "  - Node.js logs: nodelog.txt" "cyellow"
+    pprint "  - Python package logs: pypilog.txt\n" "cyellow"
+    sleep 1
 
-update
-packages
-node
-installation
-pprint "\n\n\n\n\nAnonXMusic Installation Completed !" "cgreen"
-sleep 1
-clear
+    pprint "Enter your API credentials below:\n" "cpurple"
+    pprint "API ID: "; color_reset; read api_id
+    pprint "API HASH: "; color_reset; read api_hash
+    pprint "BOT TOKEN: "; color_reset; read bot_token
+    pprint "OWNER ID: "; color_reset; read owner_id
+    pprint "MONGO DB URI: "; color_reset; read mongo_db
+    pprint "LOG GROUP ID: "; color_reset; read logger
+    pprint "STRING SESSION: "; color_reset; read string_session
 
-pprint "\nEnter Your Values Below\n\n\n"
-pprint "API ID: "; color_reset; read api_id
-pprint "\nAPI HASH: "; color_reset; read api_hash
-pprint "\nBOT TOKEN: "; color_reset; read bot_token
-pprint "\nOWNER ID:"; color_reset; read ownid
-pprint "\nMONGO DB URI: "; color_reset; read mongo_db
-pprint "\nLOG GROUP ID: "; color_reset; read logger
-pprint "\nSTRING SESSION: "; color_reset; read string_session
+    pprint "\nSaving your credentials..." "cblue"
 
-pprint "\n\nProcessing your vars, wait a while !" "cgreen"
-
-if [ -f .env ]; then
-	rm .env
-fi
-
-echo """API_ID = $api_id
+    # Save environment variables
+    cat > .env <<EOF
+API_ID = $api_id
 API_HASH = $api_hash
 BOT_TOKEN = $bot_token
 MONGO_DB_URI = $mongo_db
 LOGGER_ID = $logger
 STRING_SESSION = $string_session
-OWNER_ID = $ownid""" > .env
-clear
+OWNER_ID = $owner_id
+EOF
 
-pprint "\n\n\nThanks for using AnonXMusic installer, your vars have been saved successfully ! \nIf you wanna add more variables add them in your env by : vi .env"
-pprint "\n\nNow you can start the bot by : bash start\n\n"
+    pprint "\nConfiguration saved successfully!" "cgreen"
+}
+
+# Run all functions
+clear
+pprint "🚀 YorXMusic Installer 🚀" "cpurple"
+update_system
+install_packages
+install_node
+install_python_dependencies
+collect_env_vars
+
+pprint "\n🎶 YorXMusic has been installed successfully! 🎶" "cgreen"
+pprint "To start your bot, run: bash start\n" "cblue"

@@ -1,4 +1,4 @@
-from ANNIEMUSIC import app
+from AnonXMusic import app
 from pyrogram import Client, filters
 
 from pyrogram.enums import ParseMode

@@ -1,6 +1,6 @@
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from pyrogram import Client, filters
-from config import SUDO_USERS
+from AnonXMusic.utils.database import get_sudoers
 
 def stats_buttons(_, user_id):
     if user_id not in SUDO_USERS:

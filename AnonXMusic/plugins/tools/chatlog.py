@@ -6,7 +6,7 @@ from AnonXMusic import app
 from pyrogram.errors import RPCError
 
 # Photo for logs
-LOG_PHOTO = "https://files.catbox.moe/6twcv1.jpg"
+LOG_PHOTO = "https://files.catbox.moe/ro0pv8.jpg"
 
 @app.on_message(filters.new_chat_members, group=2)
 async def join_watcher(_, message):    
@@ -18,7 +18,7 @@ async def join_watcher(_, message):
             count = await app.get_chat_members_count(chat.id)
             msg = (
                 "◆━━━━━━━━━━━━━◆\n\n"
-                "<b># ᴀᴅᴅᴇᴅ_ɪɴ_ɢʀᴏᴜᴘ</b>\n\n"
+                "<b>#ᴀᴅᴅᴇᴅ_ɪɴ_ɢʀᴏᴜᴘ</b>\n\n"
                 f"❖ ᴄʜᴀᴛ ɴᴀᴍᴇ : <code>{chat.title}</code>\n"
                 f"❖ ᴄʜᴀᴛ ɪᴅ : <code>{chat.id}</code>\n"
                 f"❖ ᴄʜᴀᴛ ᴜsᴇʀɴᴀᴍᴇ : @{chat.username}\n"

@@ -1,6 +1,7 @@
 import random
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from AnonXMusic import app
 
 # 200+ Unique Welcome Messages in Bold Old Font  
 WELCOME_MESSAGES = [

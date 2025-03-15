@@ -52,6 +52,9 @@ def stream_markup_timer(_, chat_id, played, dur):
         bar = "━━━━━━━━━━━✦"
     else:
         bar = "━━━━━━━━━━━✦"
+        
+        [
+        buttons = [
         [
             InlineKeyboardButton(
                 text=f"{played} {bar} {dur}",
@@ -84,18 +87,13 @@ def stream_markup_timer(_, chat_id, played, dur):
         ],
         [
             InlineKeyboardButton(
-                text=f"{played} {bar} {dur}",
-                callback_data="GetTimer",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                text=_["CLOSE_BUTTON"], callback_data="close"
+                text=_["CLOSE_BUTTON"],
+                callback_data="close"
             )
         ],
     ]
-    
-    return buttons  # Corrected indentation
+
+    return buttons  # Ensure correct indentationindentation
 
 
 def stream_markup(_, chat_id):

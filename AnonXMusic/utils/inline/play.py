@@ -1,6 +1,7 @@
 import math
 from pyrogram.types import InlineKeyboardButton
 from AnonXMusic.utils.formatters import time_to_seconds
+from AnonXMusic.utils.inline.play import stream_markup
 
 def track_markup(_, videoid, user_id, channel, fplay):
     buttons = [
@@ -57,13 +58,8 @@ def stream_markup_timer(_, chat_id, played, dur):
     else:
         bar = "━━━━━━━━━━━✦"
 
+    def stream_markup(_, chat_id):
     buttons = [
-        [
-            InlineKeyboardButton(
-                text=f"{played} {bar} {dur}",
-                callback_data="GetTimer",
-            )
-        ],
         [
             InlineKeyboardButton(
                 text="ʀᴇsᴜᴍᴇ",
@@ -95,7 +91,7 @@ def stream_markup_timer(_, chat_id, played, dur):
             )
         ],
     ]
-    return buttons  # Fixed indentation
+    return buttons
 
 
 def playlist_markup(_, videoid, user_id, ptype, channel, fplay):

@@ -5,121 +5,83 @@ import aiohttp
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 from unidecode import unidecode
 from youtubesearchpython.__future__ import VideosSearch
+
+# Import from your project
 from AnonXMusic import app
 from config import YOUTUBE_IMG_URL
 
-def changeImageSize(maxWidth, maxHeight, image):
-    widthRatio = maxWidth / image.size[0]
-    heightRatio = maxHeight / image.size[1]
-    newWidth = int(widthRatio * image.size[0])
-    newHeight = int(heightRatio * image.size[1])
-    newImage = image.resize((newWidth, newHeight))
-    return newImage
+from io import BytesIO
 
-def truncate(text):
-    words = text.split(" ")
-    text1, text2 = "", ""
-    for word in words:
-        if len(text1) + len(word) < 30:
-            text1 += " " + word
-        elif len(text2) + len(word) < 30:
-            text2 += " " + word
-    return [text1.strip(), text2.strip()]
-
-def crop_center_circle(img, output_size, border, glow_intensity=20):
-    half_w, half_h = img.size[0] / 2, img.size[1] / 2
-    crop_size = int(output_size * 1.5)
-    img = img.crop((half_w - crop_size / 2, half_h - crop_size / 2, half_w + crop_size / 2, half_h + crop_size / 2))
-    img = img.resize((output_size - 2 * border, output_size - 2 * border))
-
-    final_img = Image.new("RGBA", (output_size, output_size), "black")
-    mask_main = Image.new("L", (output_size - 2 * border, output_size - 2 * border), 0)
-    draw_main = ImageDraw.Draw(mask_main)
-    draw_main.ellipse((0, 0, output_size - 2 * border, output_size - 2 * border), fill=255)
-    final_img.paste(img, (border, border), mask_main)
-
-    glow = final_img.filter(ImageFilter.GaussianBlur(glow_intensity))
-    final_img.paste(glow, (0, 0), glow)
-
-    return final_img
-
-async def get_thumb(videoid):
-    if os.path.isfile(f"cache/{videoid}_radio.png"):
-        return f"cache/{videoid}_radio.png"
-
-    url = f"https://www.youtube.com/watch?v={videoid}"
-    results = VideosSearch(url, limit=1)
-    for result in (await results.next())["result"]:
-        try:
-            title = re.sub("\W+", " ", result["title"]).title()
-        except:
-            title = "Unknown Title"
-        try:
-            duration = result["duration"]
-        except:
-            duration = "Unknown Mins"
-        thumbnail = result["thumbnails"][0]["url"].split("?")[0]
-        try:
-            views = result["viewCount"]["short"]
-        except:
-            views = "Unknown Views"
-        try:
-            channel = result["channel"]["name"]
-        except:
-            channel = "Unknown Channel"
-
+async def download_image(url):
     async with aiohttp.ClientSession() as session:
-        async with session.get(thumbnail) as resp:
+        async with session.get(url) as resp:
             if resp.status == 200:
-                f = await aiofiles.open(f"cache/thumb{videoid}.png", mode="wb")
-                await f.write(await resp.read())
-                await f.close()
+                return Image.open(BytesIO(await resp.read()))
 
-    youtube = Image.open(f"cache/thumb{videoid}.png")
-    image1 = changeImageSize(1280, 720, youtube)
-    image2 = image1.convert("RGBA")
+def add_rounded_corners(image, radius=40):
+    mask = Image.new("L", image.size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle([(0, 0), image.size], radius, fill=255)
+    image.putalpha(mask)
+    return image
+
+async def generate_music_thumbnail(video_title, artist, duration, current_time, thumbnail_url):
+    # Load YouTube thumbnail
+    bg_image = await download_image(thumbnail_url)
+    bg_image = bg_image.resize((1280, 720)).filter(ImageFilter.GaussianBlur(15))
+
+    # Create main UI overlay
+    overlay = Image.new("RGBA", (900, 500), (0, 0, 0, 150))  # Semi-transparent black
+    overlay = add_rounded_corners(overlay, 50)
+
+    # Load album art and add rounded corners
+    album_art = await download_image(thumbnail_url)
+    album_art = album_art.resize((200, 200))
+    album_art = add_rounded_corners(album_art, 30)
+
+    # Create final image
+    final_image = Image.new("RGBA", (1280, 720))
+    final_image.paste(bg_image, (0, 0))
+    final_image.paste(overlay, (190, 110), overlay)
+    final_image.paste(album_art, (220, 170), album_art)
+
+    # Load font
+    font_path = "AnonXMusic/assets/font3.ttf"  # Update this path
+    title_font = ImageFont.truetype(font_path, 50)
+    artist_font = ImageFont.truetype(font_path, 35)
+    progress_font = ImageFont.truetype(font_path, 30)
+
+    draw = ImageDraw.Draw(final_image)
+
+    # Add song title & artist
+    draw.text((450, 180), video_title, font=title_font, fill="white")
+    draw.text((450, 250), artist, font=artist_font, fill="white")
+
+    # Progress bar
+    bar_x, bar_y = 450, 350
+    bar_width, bar_height = 350, 10
+    progress = current_time / duration  # Percentage completion
+
+    # Draw empty progress bar
+    draw.rounded_rectangle([bar_x, bar_y, bar_x + bar_width, bar_y + bar_height], 5, fill=(100, 100, 100, 200))
     
-    background = image2.filter(ImageFilter.GaussianBlur(15))
-    enhancer = ImageEnhance.Brightness(background)
-    background = enhancer.enhance(0.4)
-    
-    draw = ImageDraw.Draw(background)
-    title_font = ImageFont.truetype("AnonXMusic/assets/font3.ttf", 45)
-    info_font = ImageFont.truetype("AnonXMusic/assets/font2.ttf", 30)
-    
-    circle_thumbnail = crop_center_circle(youtube, 450, 25, glow_intensity=30)
-    background.paste(circle_thumbnail, (120, 160), circle_thumbnail)
+    # Draw filled progress
+    draw.rounded_rectangle([bar_x, bar_y, bar_x + (bar_width * progress), bar_y + bar_height], 5, fill="white")
 
-    text_x_position = 600
-    title1 = truncate(title)
-    draw.text((text_x_position, 180), title1[0], fill=(255, 255, 255), font=title_font)
-    draw.text((text_x_position, 230), title1[1], fill=(255, 255, 255), font=title_font)
-    draw.text((text_x_position, 320), f"{channel}  |  {views[:23]}", fill=(255, 255, 255), font=info_font)
+    # Draw timestamps
+    draw.text((bar_x - 40, bar_y - 10), f"{int(current_time // 60)}:{int(current_time % 60):02d}", font=progress_font, fill="white")
+    draw.text((bar_x + bar_width + 10, bar_y - 10), f"{int(duration // 60)}:{int(duration % 60):02d}", font=progress_font, fill="white")
 
-    progress_bar_x = text_x_position
-    progress_bar_y = 380
-    progress_width = 600
+    # Save or show
+    final_image.show()
+    final_image.save("music_thumbnail.png")
 
-    completed_width = int(progress_width * 0.6)
-    draw.line([(progress_bar_x, progress_bar_y), (progress_bar_x + completed_width, progress_bar_y)], fill="red", width=10)
-    draw.line([(progress_bar_x + completed_width, progress_bar_y), (progress_bar_x + progress_width, progress_bar_y)], fill="white", width=8)
+# Example usage
+video_title = "Junoon"
+artist = "MITRAZ"
+duration = 168  # 2:48 in seconds
+current_time = 24  # Progress time
+thumbnail_url = f"{YOUTUBE_IMG_URL}/vi/VIDEO_ID/maxresdefault.jpg"  # Replace VIDEO_ID with actual ID
 
-    circle_radius = 10
-    circle_position = (progress_bar_x + completed_width, progress_bar_y)
-    draw.ellipse([circle_position[0] - circle_radius, circle_position[1] - circle_radius,
-                  circle_position[0] + circle_radius, circle_position[1] + circle_radius], fill="red")
-    
-    draw.text((progress_bar_x, 400), "00:00", (255, 255, 255), font=info_font)
-    draw.text((progress_bar_x + progress_width - 80, 400), duration, (255, 255, 255), font=info_font)
-
-    play_icons = Image.open("AnonXMusic/assets/play_icons.png")
-    play_icons = play_icons.resize((580, 62))
-    background.paste(play_icons, (progress_bar_x, 450), play_icons)
-
-    try:
-        os.remove(f"cache/thumb{videoid}.png")
-    except:
-        pass
-    
-    background.save(f"cache/{videoid}_radio.png")
-    return f"cache/{videoid}_radio.png"
+import asyncio
+asyncio.run(generate_music_thumbnail(video_title, artist, duration, current_time, thumbnail_url))

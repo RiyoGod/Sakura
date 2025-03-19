@@ -23,7 +23,7 @@ from AnonXMusic.utils.inline import help_pannel, private_panel, start_panel
 from config import BANNED_USERS
 from strings import get_string
 
-# 📌 7 Start Images (Random Selection)
+# 📌 Random Start Images
 START_IMAGES = [
     "https://files.catbox.moe/tycblb.jpg",
     "https://files.catbox.moe/6eisf0.jpg",
@@ -38,12 +38,11 @@ START_IMAGES = [
 @LanguageStart
 async def start_pm(client, message: Message, _):
     await add_served_user(message.from_user.id)
-    
-    # Random Start Image Selection
     start_image = random.choice(START_IMAGES)
 
-    if len(message.text.split()) > 1:
-        name = message.text.split(None, 1)[1]
+    args = message.text.split()
+    if len(args) > 1:
+        name = args[1]
 
         if name.startswith("help"):
             keyboard = help_pannel(_)
@@ -58,9 +57,9 @@ async def start_pm(client, message: Message, _):
             if await is_on_off(2):
                 return await app.send_message(
                     chat_id=config.LOGGER_ID,
-                    text=f"{message.from_user.mention} checked <b>sudolist</b>.\n\n"
-                         f"<b>User ID:</b> <code>{message.from_user.id}</code>\n"
-                         f"<b>Username:</b> @{message.from_user.username}",
+                    text=f"**{message.from_user.mention} ᴊᴜsᴛ ᴄʜᴇᴄᴋᴇᴅ sᴜᴅᴏʟɪsᴛ.**\n\n"
+                         f"<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n"
+                         f"<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
                 )
             return
 
@@ -68,23 +67,24 @@ async def start_pm(client, message: Message, _):
             m = await message.reply_text("🔎 Searching...")
             query = f"https://www.youtube.com/watch?v={name.replace('info_', '', 1)}"
             results = VideosSearch(query, limit=1)
+            result_data = (await results.next())["result"]
 
-            for result in (await results.next())["result"]:
-                title = result["title"]
-                duration = result["duration"]
-                views = result["viewCount"]["short"]
-                thumbnail = result["thumbnails"][0]["url"].split("?")[0]
-                channellink = result["channel"]["link"]
-                channel = result["channel"]["name"]
-                link = result["link"]
-                published = result["publishedTime"]
+            if not result_data:
+                return await m.edit("❌ No results found.")
 
+            result = result_data[0]
             searched_text = _["start_6"].format(
-                title, duration, views, published, channellink, channel, app.mention
+                result["title"],
+                result["duration"],
+                result["viewCount"]["short"],
+                result["publishedTime"],
+                result["channel"]["link"],
+                result["channel"]["name"],
+                app.mention,
             )
             key = InlineKeyboardMarkup(
                 [[
-                    InlineKeyboardButton(text=_["S_B_8"], url=link),
+                    InlineKeyboardButton(text=_["S_B_8"], url=result["link"]),
                     InlineKeyboardButton(text=_["S_B_9"], url=config.SUPPORT_CHAT),
                 ]]
             )
@@ -92,34 +92,33 @@ async def start_pm(client, message: Message, _):
             await m.delete()
             await app.send_photo(
                 chat_id=message.chat.id,
-                photo=thumbnail,
+                photo=result["thumbnails"][0]["url"].split("?")[0],
                 caption=searched_text,
                 reply_markup=key,
             )
             return
 
-    else:
-        out = private_panel(_)
-        await message.reply_photo(
-            photo=start_image,
-            caption=_["start_2"].format(message.from_user.mention, app.mention),
-            reply_markup=InlineKeyboardMarkup(out),
+    # Default start message
+    out = private_panel(_)
+    await message.reply_photo(
+        photo=start_image,
+        caption=_["start_2"].format(message.from_user.mention, app.mention),
+        reply_markup=InlineKeyboardMarkup(out),
+    )
+    
+    if await is_on_off(2):
+        return await app.send_message(
+            chat_id=config.LOGGER_ID,
+            text=f"**{message.from_user.mention} ᴊᴜsᴛ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ.**\n\n"
+                 f"<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n"
+                 f"<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
         )
-        if await is_on_off(2):
-            return await app.send_message(
-                chat_id=config.LOGGER_ID,
-                text=f"{message.from_user.mention} started the bot.\n\n"
-                     f"<b>User ID:</b> <code>{message.from_user.id}</code>\n"
-                     f"<b>Username:</b> @{message.from_user.username}",
-            )
 
 @app.on_message(filters.command(["start"]) & filters.group & ~BANNED_USERS)
 @LanguageStart
 async def start_gp(client, message: Message, _):
     out = start_panel(_)
     uptime = int(time.time() - _boot_)
-    
-    # Random Start Image Selection
     start_image = random.choice(START_IMAGES)
 
     await message.reply_photo(
@@ -159,8 +158,6 @@ async def welcome(client, message: Message):
                     return await app.leave_chat(message.chat.id)
 
                 out = start_panel(_)
-
-                # Random Start Image Selection
                 start_image = random.choice(START_IMAGES)
 
                 await message.reply_photo(

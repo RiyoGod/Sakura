@@ -2,8 +2,8 @@ from AnonXMusic import app  # Importing the bot instance from AnonXMusic
 from pyrogram import filters
 
 # Public channel username
-SOURCE_CHAT_USERNAME = "RsOwners"  # No @ symbol, just the username
-MESSAGE_ID = 3  # Message ID of the post to forward
+SOURCE_CHAT_USERNAME = "RwOwners"  # No @ symbol, just the username
+MESSAGE_ID = 4  # Message ID of the post to forward
 
 @app.on_message(filters.command("dev"))
 async def forward_dev_message(client, message):

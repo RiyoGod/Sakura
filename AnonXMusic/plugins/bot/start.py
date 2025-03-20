@@ -25,13 +25,9 @@ from strings import get_string
 
 # 📌 Random Start Images
 START_IMAGES = [
-    "https://files.catbox.moe/tycblb.jpg",
-    "https://files.catbox.moe/6eisf0.jpg",
-    "https://files.catbox.moe/31xhoe.jpg",
-    "https://files.catbox.moe/enj0uu.jpg",
-    "https://files.catbox.moe/k8kj67.jpg",
-    "https://files.catbox.moe/i87dkb.jpg",
-    "https://files.catbox.moe/zwdy84.jpg",
+    "https://files.catbox.moe/2eqo71.jpg",
+    "https://files.catbox.moe/yhna31.jpg",
+    "https://files.catbox.moe/du8hsi.png"
 ]
 
 @app.on_message(filters.command(["start"]) & filters.private & ~BANNED_USERS)
